@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hush | Unfolding Whisper</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;1,400;1,500&display=swap" rel="stylesheet">
+    <link rel="icon" href="assets/hush.png" type="image/x-icon">
+    <style>
+        :root { --glass: rgba(255, 255, 255, 0.02); --border: rgba(255, 255, 255, 0.1); }
+        body { font-family: 'Inter', sans-serif; background: #050508; color: #f1f5f9; overflow-x: hidden; min-height: 100vh; }
+        .serif { font-family: 'Playfair Display', serif; }
+        #particles-js { position: fixed; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 50%, #11101d 0%, #050508 100%); }
+        
+        .nav-pill {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            z-index: 100;
+        }
+
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(40px);
+            border: 1px solid var(--border);
+            box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8);
+        }
+
+        .vignette {
+            position: fixed; inset: 0; pointer-events: none; z-index: 5;
+            background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.9) 150%);
+            opacity: 0; transition: opacity 3s ease;
+        }
+        .vignette.active { opacity: 1; }
+
+        .reveal-anim { animation: revealUp 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes revealUp {
+            from { opacity: 0; transform: translateY(20px); filter: blur(15px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+
+        .typing-dot { width: 4px; height: 4px; background: #6366f1; border-radius: 50%; animation: blink 1.4s infinite both; }
+        @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+        .toast { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Mobile specific font and spacing fixes */
+        @media (max-width: 640px) {
+            .glass-card { padding: 2rem 1.5rem !important; border-radius: 2.5rem; }
+            .nav-pill { top: 1rem !important; height: 3.5rem; padding: 0 1rem; }
+            #messageBody { font-size: 1.5rem !important; line-height: 1.6; }
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+
+    <div id="particles-js"></div>
+    <div id="vignette" class="vignette"></div>
+
+    <div class="fixed top-6 md:top-8 left-0 w-full px-4 md:px-6 flex justify-center z-[100]">
+        <nav class="nav-pill w-full max-w-xl rounded-2xl flex items-center justify-between h-14 md:h-16 px-4 md:px-6">
+            <div class="flex items-center gap-2 md:gap-3">
+                <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg">
+                    <img src="assets/hush.png" alt="Logo" class="w-5 h-5 md:w-6 md:h-6 rounded-md">
+                </div>
+                <div class="flex flex-col">
+                    <span class="serif italic text-base md:text-lg leading-none">Hush</span>
+                    <span class="text-[7px] md:text-[8px] uppercase tracking-widest text-indigo-400 font-bold">Encrypted</span>
+                </div>
+            </div>
+            <a href="index.html" class="px-3 py-1.5 md:px-4 md:py-2 rounded-xl bg-white/5 border border-white/5 text-[7px] md:text-[9px] uppercase tracking-widest text-slate-400 font-bold hover:bg-white/10 transition-all">
+                New
+            </a>
+        </nav>
+    </div>
+
+    <main class="flex-grow flex items-center justify-center p-4 pt-28 md:pt-32 pb-12">
+        <div id="mainCard" class="w-full max-w-xl glass-card p-8 md:p-16 rounded-[3rem] relative overflow-hidden">
+            
+            <div id="inputStage" class="text-center space-y-6 md:space-y-8">
+                <div class="space-y-2 md:space-y-3">
+                    <h1 class="serif text-2xl md:text-4xl italic">Unfold a Whisper</h1>
+                    <p class="text-slate-500 text-[8px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.4em]">Paste the secure link below</p>
+                </div>
+                <input id="linkInput" type="text" placeholder="https://..." class="w-full p-4 rounded-xl md:rounded-2xl bg-black/40 border border-white/10 text-center text-xs text-slate-400 focus:outline-none focus:border-indigo-500/50">
+                <button id="revealBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-xl md:rounded-2xl font-bold tracking-widest text-[9px] md:text-[10px] uppercase transition-all shadow-xl shadow-indigo-900/40">
+                    Open Slowly
+                </button>
+            </div>
+
+            <div id="loadingStage" class="hidden text-center py-8 md:py-12">
+                <div class="flex justify-center gap-2 mb-6">
+                    <div class="typing-dot"></div><div class="typing-dot" style="animation-delay: 0.2s"></div><div class="typing-dot" style="animation-delay: 0.4s"></div>
+                </div>
+                <p class="text-[9px] uppercase tracking-[0.5em] text-indigo-400 animate-pulse font-bold">Deciphering</p>
+            </div>
+
+            <div id="displayStage" class="hidden">
+                <div id="captureArea" class="text-center p-2 md:p-4">
+                    <div class="mb-8 md:mb-14">
+                        <span class="text-[8px] md:text-[9px] uppercase tracking-[0.5em] text-indigo-500 font-bold opacity-60 block mb-2">Message from</span>
+                        <h2 id="senderName" class="serif text-xl md:text-2xl italic text-slate-200"></h2>
+                    </div>
+                    <div class="mb-8 md:mb-14 px-2">
+                        <p id="messageBody" class="serif text-xl md:text-3xl leading-relaxed text-slate-100 italic font-light whitespace-pre-wrap break-words"></p>
+                    </div>
+                    <div id="imgBranding" class="hidden mt-6 opacity-20 serif text-[10px] italic tracking-widest uppercase">Hush Protocol</div>
+                </div>
+
+                <div class="pt-8 border-t border-white/5 flex flex-col sm:flex-row gap-3 md:gap-4">
+                    <button id="downloadBtn" class="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl md:rounded-2xl bg-white/5 border border-white/5 text-emerald-400 text-[8px] md:text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Save Keepsake
+                    </button>
+                    <button id="replayBtn" class="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl md:rounded-2xl bg-white/5 border border-white/5 text-slate-400 text-[8px] md:text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Replay
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-6 md:p-10 text-center relative z-10">
+        <p class="text-[9px] md:text-[10px] uppercase tracking-[0.4em] text-slate-600 font-medium">
+            Hush &bull; <span class="text-indigo-400/80 italic">elitsuv</span>
+        </p>
+    </footer>
+
+    <div id="notification-container" class="fixed bottom-4 right-4 left-4 md:left-auto md:bottom-8 md:right-8 z-[200] flex flex-col gap-2 items-center md:items-end"></div>
+
+    <script>
+        lucide.createIcons();
+        particlesJS('particles-js', {
+            "particles": {
+                "number": { "value": 30, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": "#6366f1" },
+                "opacity": { "value": 0.1 },
+                "size": { "value": 2 },
+                "line_linked": { "enable": true, "distance": 150, "color": "#6366f1", "opacity": 0.05 },
+                "move": { "enable": true, "speed": 0.5 }
+            }
+        });
+
+        const notify = (type, message) => {
+            const container = document.getElementById('notification-container');
+            const toast = document.createElement('div');
+            const style = type === 'success' ? 'border-indigo-500/20 text-indigo-400 bg-indigo-900/20' : 'border-red-500/20 text-red-400 bg-red-900/20';
+            toast.className = `toast glass-card border w-full md:w-auto flex items-center justify-center gap-3 px-6 py-3 rounded-xl text-[9px] font-bold uppercase tracking-wider ${style}`;
+            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'sparkles' : 'alert-circle'}" class="w-4 h-4"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 3000);
+        };
+
+        const processReveal = (hash) => {
+            try {
+                const binary = atob(hash);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const data = JSON.parse(new TextDecoder().decode(bytes));
+
+                document.getElementById('inputStage').classList.add('hidden');
+                document.getElementById('loadingStage').classList.remove('hidden');
+
+                setTimeout(() => {
+                    document.getElementById('senderName').innerText = data.s || "Anonymous";
+                    document.getElementById('messageBody').innerText = data.m;
+                    document.getElementById('loadingStage').classList.add('hidden');
+                    document.getElementById('displayStage').classList.remove('hidden');
+                    document.getElementById('captureArea').classList.add('reveal-anim');
+                    document.getElementById('vignette').classList.add('active');
+                    notify('success', 'Whisper Unfolded');
+                }, 2000);
+            } catch (e) {
+                notify('error', 'Invalid Whisper Link');
+            }
+        };
+
+        if (window.location.hash) processReveal(window.location.hash.substring(1));
+
+        document.getElementById('revealBtn').addEventListener('click', () => {
+            const val = document.getElementById('linkInput').value;
+            const hash = val.includes('#') ? val.split('#')[1] : val;
+            if (hash) processReveal(hash);
+            else notify('error', 'Link required');
+        });
+
+        document.getElementById('replayBtn').addEventListener('click', () => {
+            const area = document.getElementById('captureArea');
+            area.classList.remove('reveal-anim');
+            void area.offsetWidth;
+            area.classList.add('reveal-anim');
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const brand = document.getElementById('imgBranding');
+            brand.classList.remove('hidden');
+            html2canvas(document.getElementById('captureArea'), { 
+                backgroundColor: '#050508', 
+                scale: 2,
+                logging: false,
+                useCORS: true 
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Hush-Whisper.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                brand.classList.add('hidden');
+                notify('success', 'Keepsake Saved');
+            });
+        });
+    </script>
+</body>
+</html>
